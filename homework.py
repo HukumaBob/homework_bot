@@ -30,13 +30,6 @@ HOMEWORK_VERDICTS = {
 }
 
 
-logging.basicConfig(
-    format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
-    level=logging.DEBUG,
-    filename='program.log',
-    filemode='w',
-)
-
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler()
 logger.addHandler(handler)
@@ -52,10 +45,10 @@ def send_message(bot, message):
     try:
         logger.debug('Trying to send a message...')
         bot.send_message(TELEGRAM_CHAT_ID, message)
-    except telegram.TelegramError as telegram_err:
+    except telegram.TelegramError:
         msg = ('Error while sending message.')
         logger.error(msg)
-        raise telegram_err(msg)
+        raise exceptions.TelegramBotError(msg)
     else:
         logger.debug('All OK, message sent.')
 
@@ -70,15 +63,16 @@ def get_api_answer(timestamp):
         logger.error(error)
         raise exceptions.GetApiAnswerError(error)
     if response.status_code != HTTPStatus.OK:
-        error200 = response.raise_for_status()
-        logger.error(error200)
-        raise exceptions.GetApiAnswerError(error200)
+        error = f'Connection error HTTP-status: {str(response.status_code)}'
+        logger.error(error)
+        raise exceptions.GetApiAnswerError(error)
     return response.json()
 
 
 def check_response(response):
     """
     Check structure of JSON document.
+
     Return main part of it.
     """
     responce_dict = {'homeworks': list,
@@ -99,6 +93,7 @@ def check_response(response):
         if not dict_value:
             msg = f'{key} dictionary value/s is empty'
             logger.error(msg)
+            raise exceptions.ValuesMissingError(msg)
         if not isinstance(dict_value, value):
             msg = f'{key} dictionary value is not {value} type'
             logger.error(msg)
@@ -110,6 +105,7 @@ def check_response(response):
 
 def parse_status(homework):
     """Parse homework dictionary.
+
     Return status in string.
     """
     homework_status = homework['status']
@@ -118,11 +114,12 @@ def parse_status(homework):
     except KeyError as key_error:
         msg = f'Error or missing key: {key_error}'
         logger.error(msg)
+        raise exceptions.ParseStatusError(msg)
     if homework_status not in HOMEWORK_VERDICTS:
         error_message = (
             f'Unknown homework status: {homework_status}')
         logger.exception(error_message)
-        raise exceptions.ValuesMissingError(error_message)
+        raise exceptions.ParseStatusError(error_message)
     verdict = HOMEWORK_VERDICTS.get(homework_status)
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
@@ -156,4 +153,10 @@ def main():
 
 
 if __name__ == '__main__':
+    logging.basicConfig(
+        format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
+        level=logging.DEBUG,
+        filename='program.log',
+        filemode='w',
+    )
     main()
