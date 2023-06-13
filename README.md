@@ -15,7 +15,7 @@ Sends messages when the status is changed - submitted for review, has remarks, a
 Clone the repository and navigate to it in the command line:
 
 ```
-git clone git@github.com:PashkaVRN/homework_bot.git
+git clone git@github.com:HukumaBob/homework_bot.git
 ```
 
 ```
